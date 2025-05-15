@@ -7,7 +7,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     address: Optional[str] = None
-    role: str
+    role: Optional[str] = "user"
     password: str
 
 class UserRead(BaseModel):
@@ -20,4 +20,13 @@ class UserRead(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+    
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserRead
