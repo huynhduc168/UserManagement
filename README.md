@@ -20,3 +20,9 @@ python 25.1.1
 - Dừng server & thoát môi trường ảo
     + Dừng server: nhấn Ctrl + C
     + Thoát môi trường ảo: deactivate
+
+- Copy lib vào file requirements.txt
+    pip freeze > requirements.txt
+
+- cài đặt lib trong requirements
+    pip install -r requirements.txt

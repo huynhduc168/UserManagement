@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.user import UserCreate
-from app.untils.authen import Authen
+from app.utils.authen import Authen
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.schemas.user import UserCreate, UserRead, TokenResponse
 from app.crud import user as crud_user
 from app.db.session import get_db
-from app.untils.jwt_token import create_access_token
+from app.utils.jwt_token import create_access_token
 
 router = APIRouter()
 
