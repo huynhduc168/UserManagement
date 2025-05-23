@@ -7,11 +7,11 @@ import numpy as np
 def save_upload_file(upload_file: UploadFile, destination: str):
     with open(destination, "wb") as buffer:
         shutil.copyfileobj(upload_file.file, buffer)
-        
-        
+
 def detect_faces(image_path):
     #Đọc ảnh từ file
     img = cv2.imread(image_path)
+
     if img is None:
         print("Không đọc được ảnh, kiểm tra lại đường dẫn")
         return []
@@ -37,3 +37,12 @@ def detect_faces(image_path):
     # cv2.destroyAllWindows()
     
     return faces
+
+
+# Hàm so sánh khuôn mặt sử dụng vector đặc trưng (embedding) từ MTCNN
+# Giả sử detect_faces trả về vector embedding (list hoặc numpy array)
+# def compare_mtcnn_faces(face1, face2, threshold=0.6):
+#     face1 = np.array(face1)
+#     face2 = np.array(face2)
+#     distance = np.linalg.norm(face1 - face2)
+#     return distance < threshold

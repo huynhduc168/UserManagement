@@ -72,7 +72,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db), _ = Depends(require
 @router.post("/face-verify/{user_id}", response_model=FaceVerifyResponse)
 def face_verify(
     user_id: int,
-    uploaded_face: UploadFile = File(...),
+    photo: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: UserRead = Depends(get_current_user)
 ):
@@ -87,26 +87,30 @@ def face_verify(
         if not db_user:
             raise HTTPException(status_code=404, detail="User không tồn tại")
 
-        # tạo tên file tạm
-        temp_filename = f"temp_{uuid.uuid4().hex}.jpg"
-        temp_path = os.path.join("temp_uploads", temp_filename)
+        # Tạo thư mục riêng cho user
+        user_folder = os.path.join("face_uploads", f"user_{user_id}")
+        os.makedirs(user_folder, exist_ok=True)
 
-        # Tạo thư mục nếu chưa tồn tại
-        os.makedirs("temp_uploads", exist_ok=True)
+        # Xóa toàn bộ ảnh cũ trong thư mục user này
+        for filename in os.listdir(user_folder):
+            file_path = os.path.join(user_folder, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
-        # Lưu file ảnh upload
-        save_upload_file(uploaded_face, temp_path)
+        # Tạo tên file duy nhất cho ảnh mới
+        temp_filename = f"face_{uuid.uuid4().hex}.jpg"
+        temp_path = os.path.join(user_folder, temp_filename)
+        save_upload_file(photo, temp_path)
 
         # Phát hiện khuôn mặt
         faces = detect_faces(temp_path)
 
-        # Xóa file tạm sau khi xử lý
-        os.remove(temp_path)
-
         if not faces:
+            os.remove(temp_path)
             raise HTTPException(status_code=400, detail="Không phát hiện được khuôn mặt người")
 
-        db_user.uploaded_face_path = json.dumps(faces, default=str)
+        # Lưu path ảnh vào DB thay vì lưu faces
+        db_user.uploaded_face_path = temp_path
         db.commit()
 
         data = UserFaceVerificationUpdate(
@@ -117,19 +121,66 @@ def face_verify(
 
         return FaceVerifyResponse(
             data=data,
-            message="Xác minh khuôn mặt thành công và đã lưu ảnh"
+            message="Avt Hợp Lệ"
         )
 
     except HTTPException as http_exc:
         raise http_exc  # Cho FastAPI xử lý đúng mã lỗi
 
     except asyncio.CancelledError:
-        # Client cancel giữa chừng, ghi log nếu cần
         print("Client đã hủy yêu cầu trong quá trình xử lý.")
         raise HTTPException(status_code=499, detail="Client cancelled the request")
 
     except Exception as e:
-        # Bắt các lỗi không mong muốn
         print(f"Lỗi hệ thống: {e}")
         raise HTTPException(status_code=500, detail="Lỗi hệ thống khi xác minh khuôn mặt")
-    
+
+
+# @router.post("/face-verify-compare/{user_id}")
+# def face_verify_compare(
+#     user_id: int,
+#     photo: UploadFile = File(...),
+#     db: Session = Depends(get_db),
+#     current_user: UserRead = Depends(get_current_user)
+# ):
+#     # Chỉ cho phép user tự xác thực khuôn mặt của mình
+#     if current_user.id != user_id:
+#         raise HTTPException(status_code=403, detail="Bạn không có quyền xác thực khuôn mặt người khác")
+
+#     db_user = crud_user.get_user_by_id(db, user_id)
+#     if not db_user:
+#         raise HTTPException(status_code=404, detail="User không tồn tại")
+
+#     # Kiểm tra đã có khuôn mặt lưu trước đó chưa
+#     if not db_user.uploaded_face_path:
+#         raise HTTPException(status_code=400, detail="Chưa có dữ liệu khuôn mặt để so sánh. Hãy xác minh khuôn mặt trước.")
+
+#     # Lưu file ảnh upload tạm thời
+#     temp_filename = f"compare_{uuid.uuid4().hex}.jpg"
+#     temp_path = os.path.join("temp_uploads", temp_filename)
+#     os.makedirs("temp_uploads", exist_ok=True)
+#     save_upload_file(photo, temp_path)
+
+#     try:
+#         # Lấy encoding/kết quả khuôn mặt từ ảnh mới
+#         new_faces = detect_faces(temp_path)  # Hàm này trả về list encoding hoặc vector đặc trưng
+#         if not new_faces:
+#             raise HTTPException(status_code=400, detail="Không phát hiện được khuôn mặt trong ảnh gửi lên")
+
+#         # Lấy encoding/kết quả khuôn mặt đã lưu
+#         stored_faces = json.loads(db_user.uploaded_face_path)
+
+#         # So sánh (giả sử bạn chỉ lưu 1 khuôn mặt, lấy phần tử đầu tiên)
+#         is_verified = compare_mtcnn_faces(new_faces[0], stored_faces[0])  # Hàm này sẽ được định nghĩa bên dưới
+
+#         # Nếu giống nhau thì cập nhật trạng thái xác thực
+#         if is_verified:
+#             db_user.is_face_verified = True
+#             db.commit()
+#             return {"is_face_verified": True, "message": "Xác thực khuôn mặt thành công"}
+#         else:
+#             return {"is_face_verified": False, "message": "Khuôn mặt không trùng khớp"}
+
+#     finally:
+#         os.remove(temp_path)
+
